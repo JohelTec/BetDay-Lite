@@ -2,7 +2,7 @@ Este es un proyecto de [Next.js](https://nextjs.org) creado con [`create-next-ap
 
 ## 🎲 BetDay Lite - Plataforma de Apuestas Deportivas
 
-Una aplicación moderna de apuestas deportivas construida con Next.js 15+, React 18+, TypeScript, Prisma y NextAuth. Realiza apuestas en eventos deportivos diarios con una interfaz hermosa, responsiva y persistencia real en base de datos.
+Una aplicación moderna de apuestas deportivas construida con Next.js 16+, React 19+, TypeScript, Prisma y NextAuth. Realiza apuestas en eventos deportivos diarios con una interfaz hermosa, responsiva y persistencia real en base de datos PostgreSQL.
 
 ## 📋 Tabla de Contenidos
 
@@ -30,14 +30,15 @@ Una aplicación moderna de apuestas deportivas construida con Next.js 15+, React
 npm install
 
 # 2. Configurar variables de entorno
-# Crea un archivo .env o .env.local con:
-# NEXTAUTH_SECRET=your-super-secret-key-change-this-in-production-min-32-chars-long
+# Crea un archivo .env.local con:
+# DATABASE_URL="postgresql://..."
+# DIRECT_URL="postgresql://..."
+# NEXTAUTH_SECRET=bLcED4RMiFT9tpq0dDrbEMR1Uhz47zEcX/22EbM0MDk=
 # NEXTAUTH_URL=http://localhost:3000
-# DATABASE_URL="file:./prisma/dev.db"
 
 # 3. Configurar base de datos
 npx prisma generate
-npx prisma migrate dev
+npx prisma migrate dev --name init
 
 # 4. Crear usuario de prueba (opcional)
 npm run db:seed
@@ -50,22 +51,25 @@ Visita [http://localhost:3000](http://localhost:3000) e inicia sesión con:
 - **Email**: test@example.com
 - **Contraseña**: 123456
 
-**Nota**: Si encuentras errores de base de datos en Windows, consulta la [sección de Configuración de Variables de Entorno](#configurar-variables-de-entorno) para usar rutas absolutas.
+**Nota**: Esta aplicación usa PostgreSQL. Para desarrollo local puedes usar Vercel Postgres o cualquier instancia de PostgreSQL. Consulta [VERCEL-POSTGRES-COMPLETO.md](VERCEL-POSTGRES-COMPLETO.md) para configuración completa.
 
 ## ✅ Estado del Proyecto
 
 Este proyecto está **completamente funcional** con las siguientes características implementadas y probadas:
 
 - ✅ Autenticación completa con NextAuth (hash de contraseñas con bcryptjs)
-- ✅ Base de datos SQLite con Prisma ORM
+- ✅ Base de datos PostgreSQL con Prisma ORM
+- ✅ Compatibilidad con Vercel Postgres y Prisma Accelerate
 - ✅ Sistema de balance con transacciones atómicas
 - ✅ Precisión decimal en operaciones monetarias
-- ✅ Variables de entorno configuradas (`.env` y `.env.local`)
+- ✅ Variables de entorno configuradas (`.env.local`)
 - ✅ Migraciones de base de datos aplicadas
 - ✅ Scripts de testing y validación
 - ✅ Interfaz responsiva con Tailwind CSS
 - ✅ Rutas protegidas con middleware
 - ✅ Notificaciones en tiempo real
+- ✅ Configuración trustHost para producción
+- ✅ Build optimizado para Vercel
 
 **Última actualización**: Febrero 17, 2026
 
@@ -107,15 +111,16 @@ Este proyecto está **completamente funcional** con las siguientes característi
 
 ## 🛠️ Stack Tecnológico
 
-- **Framework**: Next.js 16.1.6 (soporta características de Next.js 15+)
-- **React**: React 19.2.3 (totalmente compatible con APIs de React 18+)
+- **Framework**: Next.js 16.1.6 con Turbopack
+- **React**: React 19.2.3
 - **TypeScript**: Seguridad de tipos completa
-- **Base de Datos**: Prisma 5.22.0 + SQLite
-- **Autenticación**: NextAuth 5.0.0 (beta para Next.js 15+)
-- **Hash de Contraseñas**: bcryptjs
+- **Base de Datos**: PostgreSQL con Prisma 5.22.0
+- **Hosting**: Optimizado para Vercel (Vercel Postgres)
+- **Autenticación**: NextAuth 5.0.0-beta.30
+- **Hash de Contraseñas**: bcryptjs 3.0.3
 - **Estilos**: Tailwind CSS 4
-- **Iconos**: Lucide React
-- **Notificaciones**: Sonner
+- **Iconos**: Lucide React 0.564.0
+- **Notificaciones**: Sonner 2.0.7
 
 ## 🗄️ Esquema de Base de Datos
 
@@ -250,11 +255,11 @@ Ganancia neta: +$3.40
 - **Migraciones**: Sistema de migración integrado para cambios de schema
 - **Agnóstico de Base de Datos**: Fácil cambiar de SQLite a PostgreSQL
 
-### ¿Por qué SQLite (Desarrollo)?
-- **Cero Configuración**: No requiere configuración de servidor de base de datos
-- **Desarrollo Rápido**: Inicio inmediato sin dependencias externas
-- **Pruebas Fáciles**: Simple de resetear y poblar datos
-- **Nota de Producción**: Reemplazar con PostgreSQL para despliegues en producción
+### ¿Por qué PostgreSQL?
+- **Producción Ready**: Base de datos robusta para aplicaciones en producción
+- **Vercel Postgres**: Integración nativa con Vercel para despliegue sin fricción
+- **Prisma Accelerate**: Soporte para connection pooling optimizado
+- **Escalabilidad**: Preparado para crecer con tu aplicación
 
 ### ¿Por qué NextAuth?
 - **Soporte Oficial**: Mantenido por el equipo de Next.js
@@ -301,39 +306,34 @@ npm install
 
 3. **Configurar variables de entorno**
 
-Crea un archivo `.env` o `.env.local` en el directorio raíz:
+Crea un archivo `.env.local` en el directorio raíz:
 ```env
 # NextAuth Configuration
-NEXTAUTH_SECRET=your-super-secret-key-change-this-in-production-min-32-chars-long
+NEXTAUTH_SECRET=bLcED4RMiFT9tpq0dDrbEMR1Uhz47zEcX/22EbM0MDk=
 NEXTAUTH_URL=http://localhost:3000
 
-# Database
-DATABASE_URL="file:./prisma/dev.db"
+# PostgreSQL Database (Vercel Postgres o cualquier PostgreSQL)
+DATABASE_URL="postgresql://user:password@host:5432/database"
+DIRECT_URL="postgresql://user:password@host:5432/database?sslmode=require"
 ```
 
 **Detalles de Variables de Entorno:**
 
 | Variable | Descripción | Ejemplo |
 |----------|-------------|---------|
-| `DATABASE_URL` | Cadena de conexión a la base de datos | `file:./prisma/dev.db` (SQLite) o cadena de conexión PostgreSQL |
+| `DATABASE_URL` | Cadena de conexión PostgreSQL (con pooling para Prisma Accelerate) | `prisma+postgres://accelerate.prisma-data.net/?api_key=...` |
+| `DIRECT_URL` | Cadena de conexión directa PostgreSQL (para migraciones) | `postgres://user:pass@host:5432/db?sslmode=require` |
 | `NEXTAUTH_URL` | URL de tu aplicación | `http://localhost:3000` (dev) o `https://tuapp.com` (prod) |
-| `NEXTAUTH_SECRET` | Clave secreta para firma JWT (mínimo 32 caracteres) | Generar con `openssl rand -base64 32` |
+| `NEXTAUTH_SECRET` | Clave secreta para firma JWT (mínimo 32 caracteres) | Ya generado: `bLcED4RMiFT9tpq0dDrbEMR1Uhz47zEcX/22EbM0MDk=` |
 
-> **Nota**: Para producción, genera una clave secreta segura usando:
-> ```bash
-> openssl rand -base64 32
-> ```
+> **Configuración PostgreSQL**:
+> - Para **Vercel Postgres**: Consulta [VERCEL-POSTGRES-COMPLETO.md](VERCEL-POSTGRES-COMPLETO.md)
+> - Para **PostgreSQL local**: Crea una base de datos y usa la cadena de conexión estándar
+> - Para **otros servicios**: AWS RDS, Railway, Render, etc. funcionan perfectamente
 
 > **Nota sobre Archivos de Entorno**:
-> - `.env` - Variables compartidas entre todos los entornos (versionado en Git si se desea)
-> - `.env.local` - Variables locales que sobrescriben `.env` (ignorado por Git)
-> - En desarrollo, puedes usar cualquiera de los dos archivos
-> - Para producción (Vercel, etc.), configura las variables en el panel de control de la plataforma
-
-> **Nota para Windows**: Si experimentas problemas con la ruta relativa del DATABASE_URL (como "Unable to open the database file"), usa la ruta absoluta:
-> ```env
-> DATABASE_URL="file:C:/ruta/completa/a/tu/proyecto/prisma/dev.db"
-> ```
+> - `.env.local` - Variables locales (ignorado por Git) - **RECOMENDADO para desarrollo**
+> - Para producción (Vercel), configura las variables en el panel de control de la plataforma
 
 4. **Configurar la base de datos**
 ```bash
@@ -476,8 +476,9 @@ La aplicación usa NextAuth con Prisma y bcryptjs para autenticación segura:
 - **Hash de Contraseñas**: Todas las contraseñas se cifran usando bcryptjs antes de almacenarse
 - **Validación de Email**: Validación regex del lado del servidor para formato de email
 - **Requisitos de Contraseña**: Mínimo 6 caracteres obligatorio
-- **Persistencia en Base de Datos**: Datos de usuario almacenados de forma segura en SQLite vía Prisma
+- **Persistencia en Base de Datos**: Datos de usuario almacenados de forma segura en PostgreSQL vía Prisma
 - **Gestión de Sesiones**: Sesiones seguras basadas en JWT
+- **TrustHost**: Configurado para producción con `trustHost: true`
 
 ### Flujo de Autenticación
 1. El usuario envía credenciales (email + contraseña)
@@ -487,11 +488,11 @@ La aplicación usa NextAuth con Prisma y bcryptjs para autenticación segura:
 5. En caso de éxito, se genera un token JWT y se crea la sesión
 
 ### Recomendaciones para Producción
-- **Usar PostgreSQL**: Reemplazar SQLite con PostgreSQL para producción
-- **Agregar Rate Limiting**: Implementar limitación de tasa en endpoints de autenticación
-- **Habilitar 2FA**: Agregar soporte de autenticación de dos factores
-- **Agregar OAuth**: Implementar inicio de sesión social (Google, GitHub, etc.)
-- **Usar Variables de Entorno**: Asegurar todas las credenciales sensibles
+- ✅ **PostgreSQL Configurado**: Ya usando PostgreSQL en producción
+- ✅ **Variables de Entorno Seguras**: NEXTAUTH_SECRET y credenciales de base de datos configuradas
+- 🔜 **Agregar Rate Limiting**: Implementar limitación de tasa en endpoints de autenticación
+- 🔜 **Habilitar 2FA**: Agregar soporte de autenticación de dos factores
+- 🔜 **Agregar OAuth**: Implementar inicio de sesión social (Google, GitHub, etc.)
 
 ## 🎨 Características UI/UX
 
@@ -516,43 +517,47 @@ git remote add origin <url-de-tu-repositorio>
 git push -u origin main
 ```
 
-2. **Configura una base de datos de producción**
+2. **Configura Vercel Postgres (ya configurado)**
    
-   **⚠️ Importante**: SQLite no es adecuado para despliegues serverless como Vercel. Usa una de estas opciones:
+   - Ve a tu proyecto en Vercel Dashboard
+   - Storage → Create Database → Postgres
+   - Conecta la base de datos con tu proyecto
+   - Las variables se agregan automáticamente
    
-   - **Opción A - Vercel Postgres** (Recomendada)
-     ```bash
-     # Agrega Vercel Postgres a tu proyecto
-     # Actualiza prisma/schema.prisma datasource a postgresql
-     ```
-   
-   - **Opción B - PostgreSQL Externo**
-     - Usa proveedores como Supabase, Railway o Neon
-     - Obtén tu cadena de conexión
-     - Actualiza la variable de entorno DATABASE_URL
+   **O usa PostgreSQL Externo:**
+   - Railway, Supabase, Neon, AWS RDS
+   - Obtén las cadenas de conexión
+   - Configura `DATABASE_URL` y `DIRECT_URL`
 
 3. **Despliega en Vercel**
-   - Ve a [vercel.com](https://vercel.com)
+   - Ve a [vercel.com/new](https://vercel.com/new)
    - Importa tu repositorio de GitHub
-   - Vercel detectará automáticamente Next.js
-   - Agrega variables de entorno:
-     - `DATABASE_URL`: Tu cadena de conexión PostgreSQL
+   - Conecta Vercel Postgres desde Storage
+   - Agrega variables de entorno manualmente:
+     - `DATABASE_URL`: Copia `POSTGRES_PRISMA_URL`
+     - `DIRECT_URL`: Copia `POSTGRES_URL_NON_POOLING`
+     - `NEXTAUTH_SECRET`: `bLcED4RMiFT9tpq0dDrbEMR1Uhz47zEcX/22EbM0MDk=`
      - `NEXTAUTH_URL`: Tu URL de producción (ej: https://tu-app.vercel.app)
-     - `NEXTAUTH_SECRET`: Genera con `openssl rand -base64 32`
 
-4. **Ejecuta migraciones en producción**
-   ```bash
-   npx prisma migrate deploy
-   ```
+4. **Deploy automático**
+   - El build ejecuta: `prisma generate && next build`
+   - Las migraciones ya deben estar aplicadas localmente
+   - O crea una migración inicial con `npx prisma migrate dev`
 
 5. **¡Listo!** Tu aplicación está ahora en vivo
 
-### Alternativa: Despliegue con Docker
+📖 **Guía completa**: [VERCEL-POSTGRES-COMPLETO.md](VERCEL-POSTGRES-COMPLETO.md)
 
-Para auto-hospedaje con SQLite, usa Docker:
+### Alternativas de Deployment
+
+**Railway.app**: Para auto-hospedaje con PostgreSQL incluido
+**Render**: Deploy automático con PostgreSQL
+**Fly.io**: Serverless con PostgreSQL integrado
+**Docker**: Para auto-hospedaje personalizado
+
 ```bash
 docker build -t betday-lite .
-docker run -p 3000:3000 betday-lite
+docker run -p 3000:3000 -e DATABASE_URL="postgresql://..." betday-lite
 ```
 
 ## 🔧 Desarrollo
@@ -561,8 +566,8 @@ docker run -p 3000:3000 betday-lite
 
 ```bash
 # Desarrollo
-npm run dev              # Iniciar servidor de desarrollo
-npm run build           # Construir para producción
+npm run dev              # Iniciar servidor de desarrollo con Turbopack
+npm run build           # Construir para producción (prisma generate + next build)
 npm start               # Iniciar servidor de producción
 npm run lint            # Ejecutar ESLint
 
@@ -647,7 +652,7 @@ npm run test:decimal
 # Generar Prisma Client después de cambios en el schema
 npx prisma generate
 
-# Crear una nueva migración
+# Crear una nueva migración (desarrollo)
 npx prisma migrate dev --name nombre_de_tu_migracion
 
 # Aplicar migraciones en producción
@@ -655,7 +660,12 @@ npx prisma migrate deploy
 
 # Resetear base de datos (⚠️ elimina todos los datos)
 npx prisma migrate reset
+
+# Abrir Prisma Studio (interfaz visual de base de datos)
+npx prisma studio
 ```
+
+**Nota**: El comando `prisma generate --no-engine` se recomienda en producción y está configurado en el proceso de build de Vercel.
 
 ## 📝 Endpoints API
 
@@ -706,8 +716,13 @@ Los usuarios no autenticados serán redirigidos a la página de inicio de sesió
 
 Documentación adicional disponible en el proyecto:
 
-### Guías Generales
+### Guías de Deployment
+- **[VERCEL-POSTGRES-COMPLETO.md](VERCEL-POSTGRES-COMPLETO.md)**: Guía completa de Vercel Postgres
+- **[MIGRACION-POSTGRESQL.md](MIGRACION-POSTGRESQL.md)**: Migración de SQLite a PostgreSQL
 - **[DEPLOY.md](DEPLOY.md)**: Guía detallada de despliegue para Vercel y otras plataformas
+- **[AWS-RDS-SETUP.md](AWS-RDS-SETUP.md)**: Configuración con AWS RDS PostgreSQL
+
+### Guías Generales
 - **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)**: Problemas comunes y soluciones
 
 ### Documentación Técnica
@@ -736,33 +751,34 @@ Genera una clave segura con: `openssl rand -base64 32`
 ```
 error: Environment variable not found: DATABASE_URL
 ```
-**Solución**: Crea un archivo `.env` o `.env.local` con:
+**Solución**: Crea un archivo `.env.local` con:
 ```env
-DATABASE_URL="file:./prisma/dev.db"
+DATABASE_URL="postgresql://user:password@host:5432/database"
+DIRECT_URL="postgresql://user:password@host:5432/database?sslmode=require"
+NEXTAUTH_SECRET=bLcED4RMiFT9tpq0dDrbEMR1Uhz47zEcX/22EbM0MDk=
 ```
 Luego reinicia el servidor de desarrollo.
 
-### Error: Unable to open the database file (Error code 14)
-```
-Error querying the database: Error code 14: Unable to open the database file
-```
-**Solución (Windows)**: Usa una ruta absoluta en tu archivo `.env`:
-```env
-DATABASE_URL="file:C:/Users/TuUsuario/ruta/completa/al/proyecto/prisma/dev.db"
-```
-Luego ejecuta:
-```bash
-npx prisma generate
-npm run dev
-```
+Para Vercel Postgres, consulta [VERCEL-POSTGRES-COMPLETO.md](VERCEL-POSTGRES-COMPLETO.md).
 
-### Problemas de Base de Datos
+### Error: UntrustedHost en producción
+```
+[auth][error] UntrustedHost: Host must be trusted
+```
+**Solución**: Ya está configurado con `trustHost: true` en `src/auth.ts`. Si persiste:
+1. Verifica que `NEXTAUTH_URL` esté configurado correctamente en Vercel
+2. Asegúrate de usar la URL completa con HTTPS
+
+### Problemas de Conexión PostgreSQL
 ```bash
-# Resetear base de datos si las migraciones fallan
-npx prisma migrate reset
+# Verificar que la base de datos está accesible
+npx prisma db push
 
 # Regenerar Prisma Client
 npx prisma generate
+
+# Ver base de datos con Prisma Studio
+npx prisma studio
 ```
 
 ### Problemas de Autenticación
@@ -824,10 +840,10 @@ Para solución de problemas más detallada, consulta [TROUBLESHOOTING.md](TROUBL
 - **Rate Limiting**: Limitar número de apuestas por usuario/tiempo
 
 ### Infraestructura
-- **Migración PostgreSQL**: Soporte completo de PostgreSQL para producción
-- **Caché con Redis**: Mejorar rendimiento con caché de eventos y cuotas
-- **CDN**: Optimización de assets estáticos
-- **Monitoreo**: Integración con herramientas de APM (Sentry, New Relic)
+- ✅ **PostgreSQL en Producción**: Ya implementado con Vercel Postgres
+- 🔜 **Caché con Redis**: Mejorar rendimiento con caché de eventos y cuotas
+- 🔜 **CDN**: Optimización de assets estáticos (Vercel lo hace automáticamente)
+- 🔜 **Monitoreo**: Integración con herramientas de APM (Sentry, New Relic)
 
 ## 📄 Licencia
 
@@ -836,10 +852,11 @@ Este proyecto es para fines demostrativos y educativos.
 ## 👨‍💻 Autor
 
 Construido como un desafío técnico para demostrar competencia con tecnologías web modernas incluyendo:
-- Next.js 15+ App Router
+- Next.js 16+ App Router con Turbopack
 - React 19 Componentes de Servidor
-- Prisma ORM con SQLite
-- Autenticación NextAuth
+- Prisma ORM con PostgreSQL
+- Vercel Postgres con Prisma Accelerate
+- Autenticación NextAuth 5.0 con trustHost
 - TypeScript
 - Tailwind CSS 4
 
@@ -852,4 +869,4 @@ Construido como un desafío técnico para demostrar competencia con tecnologías
 
 ---
 
-**Nota**: Esta es una aplicación de apuestas demostrativa con fines educativos. Aunque utiliza persistencia real en base de datos y autenticación segura, no involucra dinero real. La aplicación usa eventos y saldos simulados.
+**Nota**: Esta es una aplicación de apuestas demostrativa con fines educativos. Aunque utiliza persistencia real en base de datos PostgreSQL y autenticación segura con bcryptjs, no involucra dinero real. La aplicación usa eventos y saldos simulados.
