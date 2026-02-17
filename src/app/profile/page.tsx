@@ -5,7 +5,7 @@ import BetCard from "@/components/BetCard";
 import Loading from "@/components/Loading";
 import { Bet } from "@/lib/types";
 import { User, TrendingUp, Target, Award, Zap, BarChart3, Clock, TrendingDown, Wallet } from "lucide-react";
-import { getBetsByUserId, getUserByEmail } from "@/lib/data";
+import { getBetsByUserId, getUserByEmail, resolvePendingBets } from "@/lib/data";
 
 async function getUserBets(): Promise<Bet[]> {
   const session = await auth();
@@ -223,7 +223,10 @@ export default async function ProfilePage() {
     redirect("/auth/signin");
   }
 
-  // Obtener el balance del usuario
+  // Resolver apuestas pendientes primero
+  await resolvePendingBets(session.user.email);
+
+  // Obtener el balance del usuario (ya actualizado después de resolver apuestas)
   const userData = await getUserByEmail(session.user.email);
   const balance = userData?.balance ?? 1000.0;
 

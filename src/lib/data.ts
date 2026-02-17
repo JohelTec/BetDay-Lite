@@ -182,7 +182,7 @@ export async function createBet(
       break;
   }
 
-  // Inicialmente todas las apuestas son PENDING
+  // Todas las apuestas inician como PENDING
   const status: BetStatus = "PENDING";
 
   // Usar transacción para asegurar consistencia
@@ -472,4 +472,70 @@ export async function getUserBalance(email: string): Promise<number> {
   }
 
   return user.balance;
+}
+
+/**
+ * Resolver apuestas pendientes del usuario de forma aleatoria
+ * Esta función se ejecuta cuando el usuario visita su perfil
+ */
+export async function resolvePendingBets(userEmail: string): Promise<void> {
+  const user = await prisma.user.findUnique({
+    where: { email: userEmail },
+    include: {
+      bets: {
+        where: { status: "PENDING" },
+        include: { event: true },
+      },
+    },
+  });
+
+  if (!user || user.bets.length === 0) {
+    return;
+  }
+
+  // Resolver cada apuesta pendiente de forma aleatoria
+  for (const bet of user.bets) {
+    // 40% WON, 40% LOST, 20% sigue PENDING
+    const random = Math.random();
+    let newStatus: BetStatus;
+    
+    if (random < 0.4) {
+      newStatus = "WON";
+    } else if (random < 0.8) {
+      newStatus = "LOST";
+    } else {
+      // 20% de probabilidad de seguir pendiente
+      newStatus = "PENDING";
+    }
+
+    // Si sigue pendiente, no hacemos nada
+    if (newStatus === "PENDING") {
+      console.log(`⏳ Apuesta ${bet.id} sigue PENDIENTE`);
+      continue;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Actualizar el estado de la apuesta
+      await tx.bet.update({
+        where: { id: bet.id },
+        data: { status: newStatus },
+      });
+
+      // Si la apuesta es ganada, agregar las ganancias
+      if (newStatus === "WON") {
+        const winnings = roundMoney(bet.amount * bet.odds);
+        await tx.user.update({
+          where: { id: user.id },
+          data: {
+            balance: {
+              increment: winnings,
+            },
+          },
+        });
+        console.log(`🎉 Apuesta ${bet.id} resuelta como GANADA: +$${winnings.toFixed(2)}`);
+      } else {
+        console.log(`❌ Apuesta ${bet.id} resuelta como PERDIDA`);
+      }
+    });
+  }
 }

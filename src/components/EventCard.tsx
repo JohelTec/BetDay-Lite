@@ -140,7 +140,8 @@ export default function EventCard({ event, isAuthenticated }: EventCardProps) {
       if (response.ok) {
         const bet = await response.json();
         setShowSuccess(true);
-        toast.success(`¡Apuesta realizada! ${selection} @ ${odds.toFixed(2)}`, {
+        
+        toast.success(`¡Apuesta registrada! ${selection} @ ${odds.toFixed(2)}`, {
           description: `${event.homeTeam} vs ${event.awayTeam} - $${amount.toFixed(2)}`,
           duration: 3000,
         });
@@ -150,7 +151,9 @@ export default function EventCard({ event, isAuthenticated }: EventCardProps) {
         // Refrescar los datos del router
         router.refresh();
         
-        setTimeout(() => setShowSuccess(false), 2000);
+        setTimeout(() => {
+          setShowSuccess(false);
+        }, 2000);
       } else {
         const errorData = await response.json();
         console.error("❌ Error al crear apuesta:", errorData);
@@ -173,10 +176,11 @@ export default function EventCard({ event, isAuthenticated }: EventCardProps) {
     <div className="bg-gradient-to-br from-white via-white to-gray-50/50 rounded-2xl shadow-md hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-200 relative hover:-translate-y-2 hover:border-blue-300 group animate-fade-in-up focus-within:ring-4 focus-within:ring-blue-200">
       {/* Success Overlay */}
       {showSuccess && (
-        <div className="absolute inset-0 bg-green-500/90 z-50 flex items-center justify-center animate-fade-in backdrop-blur-sm">
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-green-600 z-50 flex items-center justify-center animate-fade-in backdrop-blur-sm">
           <div className="text-center animate-bounce-slow">
             <div className="text-6xl mb-3">✅</div>
             <p className="text-white font-black text-2xl">¡Apuesta Registrada!</p>
+            <p className="text-white text-sm mt-2 font-semibold">Ve a tu perfil para ver los resultados</p>
           </div>
         </div>
       )}
