@@ -15,6 +15,15 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "BetDay Lite - Plataforma de Apuestas Deportivas",
   description: "Realiza apuestas en eventos deportivos del día con BetDay Lite",
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/icon.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
 };
 
 export default async function RootLayout({
