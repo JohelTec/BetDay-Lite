@@ -1,5 +1,6 @@
 import { Event, Bet, BetStatus } from "./types";
 import { prisma } from "./prisma";
+import bcrypt from "bcryptjs";
 
 // Función auxiliar para redondear valores monetarios a 2 decimales
 function roundMoney(value: number): number {
@@ -152,10 +153,14 @@ export async function createBet(
   });
 
   if (!user) {
+    // Nota: Esto es para compatibilidad con código legacy. En producción,
+    // los usuarios deberían crearse solo a través del proceso de registro.
+    const defaultPassword = await bcrypt.hash("password123", 10);
     user = await prisma.user.create({
       data: {
         email: userEmail,
         name: userEmail.split("@")[0],
+        password: defaultPassword,
       },
     });
     console.log(`👤 Usuario creado: ${userEmail}`);
