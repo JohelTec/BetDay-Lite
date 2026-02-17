@@ -26,26 +26,48 @@ Una aplicación moderna de apuestas deportivas construida con Next.js 15+, React
 ## ⚡ Inicio Rápido
 
 ```bash
-# Instalar dependencias
+# 1. Instalar dependencias
 npm install
 
-# Configurar variables de entorno
-cp .env.example .env  # o crear .env manualmente
+# 2. Configurar variables de entorno
+# Crea un archivo .env o .env.local con:
+# NEXTAUTH_SECRET=your-super-secret-key-change-this-in-production-min-32-chars-long
+# NEXTAUTH_URL=http://localhost:3000
+# DATABASE_URL="file:./prisma/dev.db"
 
-# Configurar base de datos
+# 3. Configurar base de datos
 npx prisma generate
 npx prisma migrate dev
 
-# Crear usuario de prueba
+# 4. Crear usuario de prueba (opcional)
 npm run db:seed
 
-# Iniciar servidor de desarrollo
+# 5. Iniciar servidor de desarrollo
 npm run dev
 ```
 
 Visita [http://localhost:3000](http://localhost:3000) e inicia sesión con:
 - **Email**: test@example.com
 - **Contraseña**: 123456
+
+**Nota**: Si encuentras errores de base de datos en Windows, consulta la [sección de Configuración de Variables de Entorno](#configurar-variables-de-entorno) para usar rutas absolutas.
+
+## ✅ Estado del Proyecto
+
+Este proyecto está **completamente funcional** con las siguientes características implementadas y probadas:
+
+- ✅ Autenticación completa con NextAuth (hash de contraseñas con bcryptjs)
+- ✅ Base de datos SQLite con Prisma ORM
+- ✅ Sistema de balance con transacciones atómicas
+- ✅ Precisión decimal en operaciones monetarias
+- ✅ Variables de entorno configuradas (`.env` y `.env.local`)
+- ✅ Migraciones de base de datos aplicadas
+- ✅ Scripts de testing y validación
+- ✅ Interfaz responsiva con Tailwind CSS
+- ✅ Rutas protegidas con middleware
+- ✅ Notificaciones en tiempo real
+
+**Última actualización**: Febrero 17, 2026
 
 ## 🚀 Características
 
@@ -279,27 +301,38 @@ npm install
 
 3. **Configurar variables de entorno**
 
-Crea un archivo `.env` en el directorio raíz:
+Crea un archivo `.env` o `.env.local` en el directorio raíz:
 ```env
-# Base de Datos
-DATABASE_URL="file:./dev.db"
-
-# NextAuth
+# NextAuth Configuration
+NEXTAUTH_SECRET=your-super-secret-key-change-this-in-production-min-32-chars-long
 NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=tu-clave-secreta-cambiar-en-produccion
+
+# Database
+DATABASE_URL="file:./prisma/dev.db"
 ```
 
 **Detalles de Variables de Entorno:**
 
 | Variable | Descripción | Ejemplo |
 |----------|-------------|---------|
-| `DATABASE_URL` | Cadena de conexión a la base de datos | `file:./dev.db` (SQLite) o cadena de conexión PostgreSQL |
+| `DATABASE_URL` | Cadena de conexión a la base de datos | `file:./prisma/dev.db` (SQLite) o cadena de conexión PostgreSQL |
 | `NEXTAUTH_URL` | URL de tu aplicación | `http://localhost:3000` (dev) o `https://tuapp.com` (prod) |
-| `NEXTAUTH_SECRET` | Clave secreta para firma JWT | Generar con `openssl rand -base64 32` |
+| `NEXTAUTH_SECRET` | Clave secreta para firma JWT (mínimo 32 caracteres) | Generar con `openssl rand -base64 32` |
 
 > **Nota**: Para producción, genera una clave secreta segura usando:
 > ```bash
 > openssl rand -base64 32
+> ```
+
+> **Nota sobre Archivos de Entorno**:
+> - `.env` - Variables compartidas entre todos los entornos (versionado en Git si se desea)
+> - `.env.local` - Variables locales que sobrescriben `.env` (ignorado por Git)
+> - En desarrollo, puedes usar cualquiera de los dos archivos
+> - Para producción (Vercel, etc.), configura las variables en el panel de control de la plataforma
+
+> **Nota para Windows**: Si experimentas problemas con la ruta relativa del DATABASE_URL (como "Unable to open the database file"), usa la ruta absoluta:
+> ```env
+> DATABASE_URL="file:C:/ruta/completa/a/tu/proyecto/prisma/dev.db"
 > ```
 
 4. **Configurar la base de datos**
@@ -323,6 +356,8 @@ Esto crea un usuario de prueba con:
 ```bash
 npm run dev
 ```
+
+**Importante**: Si modificas las variables de entorno (archivos `.env` o `.env.local`), debes reiniciar el servidor de desarrollo para que los cambios surtan efecto.
 
 6. **Abrir tu navegador**
 
@@ -386,6 +421,7 @@ Navega a [http://localhost:3000](http://localhost:3000)
 my-app/
 ├── prisma/
 │   ├── schema.prisma                     # Schema de base de datos
+│   ├── dev.db                            # Base de datos SQLite
 │   └── migrations/                       # Migraciones de base de datos
 ├── scripts/
 │   ├── clear-users.ts                    # Limpiar todos los usuarios
@@ -394,7 +430,10 @@ my-app/
 │   └── README.md                         # Documentación de scripts
 ├── docs/
 │   ├── VALIDACION-BD.md                  # Docs de validación de BD
-│   └── VALIDACIONES-LOGIN.md             # Docs de validación de login
+│   ├── VALIDACIONES-LOGIN.md             # Docs de validación de login
+│   ├── SISTEMA-SALDO.md                  # Docs del sistema de balance
+│   ├── IMPLEMENTACION-SALDO.md           # Implementación del balance
+│   └── PRECISION-DECIMAL.md              # Precisión decimal
 ├── src/
 │   ├── app/
 │   │   ├── api/
@@ -423,7 +462,9 @@ my-app/
 │   │   └── prisma.ts                         # Cliente Prisma
 │   ├── auth.ts                               # Configuración NextAuth
 │   └── middleware.ts                         # Protección de rutas
-├── .env                                      # Variables de entorno
+├── .env                                      # Variables de entorno (compartidas)
+├── .env.local                                # Variables de entorno (locales, ignorado por git)
+├── .gitignore                                # Archivos ignorados por git
 └── package.json                              # Dependencias y scripts
 ```
 
@@ -681,6 +722,40 @@ Documentación adicional disponible en el proyecto:
 
 ## 🐛 Solución de Problemas
 
+### Error: Missing NextAuth Secret
+```
+[auth][error] MissingSecret: Please define a `secret`
+```
+**Solución**: Asegúrate de tener `NEXTAUTH_SECRET` en tu archivo `.env` o `.env.local`:
+```env
+NEXTAUTH_SECRET=your-super-secret-key-change-this-in-production-min-32-chars-long
+```
+Genera una clave segura con: `openssl rand -base64 32`
+
+### Error: Environment variable not found: DATABASE_URL
+```
+error: Environment variable not found: DATABASE_URL
+```
+**Solución**: Crea un archivo `.env` o `.env.local` con:
+```env
+DATABASE_URL="file:./prisma/dev.db"
+```
+Luego reinicia el servidor de desarrollo.
+
+### Error: Unable to open the database file (Error code 14)
+```
+Error querying the database: Error code 14: Unable to open the database file
+```
+**Solución (Windows)**: Usa una ruta absoluta en tu archivo `.env`:
+```env
+DATABASE_URL="file:C:/Users/TuUsuario/ruta/completa/al/proyecto/prisma/dev.db"
+```
+Luego ejecuta:
+```bash
+npx prisma generate
+npm run dev
+```
+
 ### Problemas de Base de Datos
 ```bash
 # Resetear base de datos si las migraciones fallan
@@ -707,6 +782,14 @@ rm -rf .next
 # Reinstalar dependencias
 rm -rf node_modules package-lock.json
 npm install
+```
+
+### El servidor no carga las variables de entorno
+**Solución**: Siempre reinicia el servidor de desarrollo después de modificar archivos `.env`:
+```bash
+# Windows PowerShell
+Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force
+npm run dev
 ```
 
 Para solución de problemas más detallada, consulta [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
