@@ -7,13 +7,14 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String?
-  password  String   @default("$2a$10$XxXxXxXxXxXxXxXxXxXxXuO8p7gJ7z8Y5K5K5K5K5K5K5K5K5K5K5K")
+  password  String
   balance   Float    @default(1000.0)
   bets      Bet[]
   createdAt DateTime @default(now())
