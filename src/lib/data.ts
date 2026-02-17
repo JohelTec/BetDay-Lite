@@ -9,71 +9,72 @@ function roundMoney(value: number): number {
 
 // Función para inicializar los eventos en la base de datos
 async function initializeEvents() {
-  const count = await prisma.event.count();
-  
-  if (count > 0) {
-    console.log(`📊 Base de datos ya tiene ${count} eventos`);
-    return;
-  }
+  try {
+    const count = await prisma.event.count();
+    
+    if (count > 0) {
+      console.log(`📊 Base de datos ya tiene ${count} eventos`);
+      return;
+    }
 
-  const leagues = [
-    "Premier League",
-    "La Liga",
-    "Bundesliga",
-    "Serie A",
-    "Ligue 1",
-    "Liga MX",
-    "Eredivisie",
-    "Liga Portugal",
-    "Copa Libertadores",
-    "UEFA Champions League",
-  ];
-  
-  const teams = [
-    { home: "Manchester United", away: "Liverpool" },
-    { home: "Barcelona", away: "Real Madrid" },
-    { home: "Bayern Munich", away: "Borussia Dortmund" },
-    { home: "Juventus", away: "Inter Milan" },
-    { home: "PSG", away: "Marseille" },
-    { home: "Arsenal", away: "Chelsea" },
-    { home: "Atletico Madrid", away: "Sevilla" },
-    { home: "RB Leipzig", away: "Bayer Leverkusen" },
-    { home: "AC Milan", away: "Napoli" },
-    { home: "Lyon", away: "Monaco" },
-    { home: "Manchester City", away: "Tottenham" },
-    { home: "Real Sociedad", away: "Valencia" },
-    { home: "Freiburg", away: "Wolfsburg" },
-    { home: "Roma", away: "Lazio" },
-    { home: "Lens", away: "Nice" },
-    { home: "América", away: "Chivas" },
-    { home: "Tigres", away: "Monterrey" },
-    { home: "Ajax", away: "PSV Eindhoven" },
-    { home: "Feyenoord", away: "AZ Alkmaar" },
-    { home: "Porto", away: "Benfica" },
-    { home: "Sporting CP", away: "Braga" },
-    { home: "Flamengo", away: "Palmeiras" },
-    { home: "River Plate", away: "Boca Juniors" },
-    { home: "São Paulo", away: "Corinthians" },
-    { home: "West Ham", away: "Newcastle" },
-    { home: "Villarreal", away: "Real Betis" },
-    { home: "Union Berlin", away: "Eintracht Frankfurt" },
-    { home: "Atalanta", away: "Fiorentina" },
-    { home: "Lille", away: "Rennes" },
-    { home: "Brighton", away: "Aston Villa" },
-  ];
+    const leagues = [
+      "Premier League",
+      "La Liga",
+      "Bundesliga",
+      "Serie A",
+      "Ligue 1",
+      "Liga MX",
+      "Eredivisie",
+      "Liga Portugal",
+      "Copa Libertadores",
+      "UEFA Champions League",
+    ];
+    
+    const teams = [
+      { home: "Manchester United", away: "Liverpool" },
+      { home: "Barcelona", away: "Real Madrid" },
+      { home: "Bayern Munich", away: "Borussia Dortmund" },
+      { home: "Juventus", away: "Inter Milan" },
+      { home: "PSG", away: "Marseille" },
+      { home: "Arsenal", away: "Chelsea" },
+      { home: "Atletico Madrid", away: "Sevilla" },
+      { home: "RB Leipzig", away: "Bayer Leverkusen" },
+      { home: "AC Milan", away: "Napoli" },
+      { home: "Lyon", away: "Monaco" },
+      { home: "Manchester City", away: "Tottenham" },
+      { home: "Real Sociedad", away: "Valencia" },
+      { home: "Freiburg", away: "Wolfsburg" },
+      { home: "Roma", away: "Lazio" },
+      { home: "Lens", away: "Nice" },
+      { home: "América", away: "Chivas" },
+      { home: "Tigres", away: "Monterrey" },
+      { home: "Ajax", away: "PSV Eindhoven" },
+      { home: "Feyenoord", away: "AZ Alkmaar" },
+      { home: "Porto", away: "Benfica" },
+      { home: "Sporting CP", away: "Braga" },
+      { home: "Flamengo", away: "Palmeiras" },
+      { home: "River Plate", away: "Boca Juniors" },
+      { home: "São Paulo", away: "Corinthians" },
+      { home: "West Ham", away: "Newcastle" },
+      { home: "Villarreal", away: "Real Betis" },
+      { home: "Union Berlin", away: "Eintracht Frankfurt" },
+      { home: "Atalanta", away: "Fiorentina" },
+      { home: "Lille", away: "Rennes" },
+      { home: "Brighton", away: "Aston Villa" },
+    ];
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  for (let i = 0; i < 30; i++) {
-    const startTime = new Date(today);
-    // Distribuir eventos a lo largo del día
-    const hourOffset = Math.floor(i / 3);
-    const minuteOffset = (i % 3) * 20;
-    startTime.setHours(12 + hourOffset, minuteOffset, 0, 0);
+    const eventsData = [];
+    for (let i = 0; i < 30; i++) {
+      const startTime = new Date(today);
+      // Distribuir eventos a lo largo del día
+      const hourOffset = Math.floor(i / 3);
+      const minuteOffset = (i % 3) * 20;
+      startTime.setHours(12 + hourOffset, minuteOffset, 0, 0);
 
-    await prisma.event.create({
-      data: {
+      eventsData.push({
         id: `event-${i + 1}`,
         league: leagues[i % leagues.length],
         homeTeam: teams[i].home,
@@ -82,11 +83,20 @@ async function initializeEvents() {
         oddsHome: parseFloat((1.5 + Math.random() * 2.5).toFixed(2)),
         oddsDraw: parseFloat((2.5 + Math.random() * 2).toFixed(2)),
         oddsAway: parseFloat((1.5 + Math.random() * 2.5).toFixed(2)),
-      },
-    });
-  }
+      });
+    }
 
-  console.log("✅ Eventos inicializados en la base de datos");
+    // Usar createMany con skipDuplicates para evitar errores de ID duplicado
+    await prisma.event.createMany({
+      data: eventsData,
+      skipDuplicates: true,
+    });
+
+    console.log("✅ Eventos inicializados en la base de datos");
+  } catch (error) {
+    console.error("❌ Error al inicializar eventos:", error);
+    // No lanzar el error, solo registrarlo para no romper la aplicación
+  }
 }
 
 export async function getEvents(): Promise<Event[]> {
