@@ -1,0 +1,54 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String   @default("$2a$10$XxXxXxXxXxXxXxXxXxXxXuO8p7gJ7z8Y5K5K5K5K5K5K5K5K5K5K5K")
+  balance   Float    @default(1000.0)
+  bets      Bet[]
+  createdAt DateTime @default(now())
+}
+
+model Event {
+  id        String   @id
+  league    String
+  homeTeam  String
+  awayTeam  String
+  startTime DateTime
+  oddsHome  Float
+  oddsDraw  Float
+  oddsAway  Float
+  bets      Bet[]
+  createdAt DateTime @default(now())
+}
+
+model Bet {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  selection String   // "1", "X", or "2"
+  odds      Float
+  amount    Float
+  status    String   // "PENDING", "WON", or "LOST"
+  createdAt DateTime @default(now())
+  
+  event     Event    @relation(fields: [eventId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([eventId])
+}
