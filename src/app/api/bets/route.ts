@@ -23,6 +23,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validar monto
+    if (typeof amount !== 'number' || amount <= 0) {
+      return NextResponse.json(
+        { error: "El monto debe ser un número mayor a 0" },
+        { status: 400 }
+      );
+    }
+
     const bet = await createBet(eventId, session.user.email, selection, amount);
 
     if (!bet) {
@@ -38,12 +46,30 @@ export async function POST(request: NextRequest) {
       event: `${bet.event.homeTeam} vs ${bet.event.awayTeam}`,
       selection: bet.selection,
       odds: bet.odds,
+      amount: bet.amount,
       status: bet.status
     });
 
     return NextResponse.json(bet, { status: 201 });
   } catch (error) {
     console.error("❌ Error al crear apuesta:", error);
+    
+    // Manejar errores específicos
+    if (error instanceof Error) {
+      if (error.message.includes("Saldo insuficiente")) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 400 }
+        );
+      }
+      if (error.message.includes("El monto")) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 400 }
+        );
+      }
+    }
+    
     return NextResponse.json(
       { error: "Failed to create bet" },
       { status: 500 }

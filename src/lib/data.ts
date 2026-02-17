@@ -1,6 +1,11 @@
 import { Event, Bet, BetStatus } from "./types";
 import { prisma } from "./prisma";
 
+// Función auxiliar para redondear valores monetarios a 2 decimales
+function roundMoney(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
 // Función para inicializar los eventos en la base de datos
 async function initializeEvents() {
   const count = await prisma.event.count();
@@ -136,6 +141,11 @@ export async function createBet(
   const event = await getEventById(eventId);
   if (!event) return null;
 
+  // Validar que el monto sea positivo
+  if (amount <= 0) {
+    throw new Error("El monto de la apuesta debe ser mayor a 0");
+  }
+
   // Obtener o crear usuario
   let user = await prisma.user.findUnique({
     where: { email: userEmail },
@@ -151,6 +161,14 @@ export async function createBet(
     console.log(`👤 Usuario creado: ${userEmail}`);
   }
 
+  // Redondear el monto a 2 decimales para evitar problemas de precisión
+  const roundedAmount = roundMoney(amount);
+
+  // Verificar que el usuario tenga saldo suficiente
+  if (user.balance < roundedAmount) {
+    throw new Error(`Saldo insuficiente. Saldo disponible: $${user.balance.toFixed(2)}`);
+  }
+
   let odds: number;
   switch (selection) {
     case "1":
@@ -164,56 +182,84 @@ export async function createBet(
       break;
   }
 
-  // Randomly determine status for demo purposes
-  const randomStatus = Math.random();
-  let status: BetStatus = "PENDING";
-  if (randomStatus < 0.3) {
-    status = "WON";
-  } else if (randomStatus < 0.5) {
-    status = "LOST";
-  }
+  // Inicialmente todas las apuestas son PENDING
+  const status: BetStatus = "PENDING";
 
-  const bet = await prisma.bet.create({
-    data: {
-      eventId,
-      userId: user.id,
-      selection,
-      odds,
-      amount,
-      status,
-    },
-    include: {
-      event: true,
-    },
+  // Usar transacción para asegurar consistencia
+  const result = await prisma.$transaction(async (tx) => {
+    // Crear la apuesta con el monto redondeado
+    const bet = await tx.bet.create({
+      data: {
+        eventId,
+        userId: user.id,
+        selection,
+        odds,
+        amount: roundedAmount,
+        status,
+      },
+      include: {
+        event: true,
+      },
+    });
+
+    // Descontar el monto del saldo del usuario
+    await tx.user.update({
+      where: { id: user.id },
+      data: {
+        balance: {
+          decrement: roundedAmount,
+        },
+      },
+    });
+
+    return bet;
+  });
+
+  const updatedUser = await prisma.user.findUnique({
+    where: { id: user.id },
   });
 
   console.log(`💾 Apuesta guardada en BD:`, {
-    betId: bet.id,
+    betId: result.id,
     userId: user.email,
-    event: `${bet.event.homeTeam} vs ${bet.event.awayTeam}`,
-    selection: bet.selection,
-    status: bet.status,
+    event: `${result.event.homeTeam} vs ${result.event.awayTeam}`,
+    selection: result.selection,
+    amount: result.amount,
+    status: result.status,
+    saldoAnterior: user.balance,
+    saldoActual: updatedUser?.balance,
+  });
+
+  console.log(`💾 Apuesta guardada en BD:`, {
+    betId: result.id,
+    userId: user.email,
+    event: `${result.event.homeTeam} vs ${result.event.awayTeam}`,
+    selection: result.selection,
+    amount: result.amount,
+    status: result.status,
+    saldoAnterior: user.balance,
+    saldoActual: updatedUser?.balance,
   });
 
   return {
-    id: bet.id,
-    eventId: bet.eventId,
+    id: result.id,
+    eventId: result.eventId,
     userId: userEmail,
-    selection: bet.selection as "1" | "X" | "2",
-    odds: bet.odds,
-    amount: bet.amount,
-    status: bet.status as BetStatus,
-    createdAt: bet.createdAt,
+    selection: result.selection as "1" | "X" | "2",
+    odds: result.odds,
+    amount: result.amount,
+    status: result.status as BetStatus,
+    createdAt: result.createdAt,
     event: {
-      id: bet.event.id,
-      league: bet.event.league,
-      homeTeam: bet.event.homeTeam,
-      awayTeam: bet.event.awayTeam,
-      startTime: bet.event.startTime,
+      id: result.event.id,
+      league: result.event.league,
+      homeTeam: result.event.homeTeam,
+      awayTeam: result.event.awayTeam,
+      startTime: result.event.startTime,
       odds: {
-        home: bet.event.oddsHome,
-        draw: bet.event.oddsDraw,
-        away: bet.event.oddsAway,
+        home: result.event.oddsHome,
+        draw: result.event.oddsDraw,
+        away: result.event.oddsAway,
       },
     },
   };
@@ -317,4 +363,113 @@ export async function getUserByEmail(email: string): Promise<{ email: string; ba
     email: user.email,
     balance: user.balance,
   };
+}
+
+/**
+ * Actualizar el estado de una apuesta y gestionar el saldo del usuario
+ */
+export async function updateBetStatus(
+  betId: string,
+  newStatus: BetStatus
+): Promise<Bet | null> {
+  const bet = await prisma.bet.findUnique({
+    where: { id: betId },
+    include: {
+      event: true,
+      user: true,
+    },
+  });
+
+  if (!bet) {
+    throw new Error("Apuesta no encontrada");
+  }
+
+  // No se puede cambiar el estado de una apuesta que ya fue resuelta
+  if (bet.status !== "PENDING") {
+    throw new Error(`La apuesta ya fue resuelta como ${bet.status}`);
+  }
+
+  // Usar transacción para asegurar consistencia
+  const result = await prisma.$transaction(async (tx) => {
+    // Actualizar el estado de la apuesta
+    const updatedBet = await tx.bet.update({
+      where: { id: betId },
+      data: { status: newStatus },
+      include: {
+        event: true,
+        user: true,
+      },
+    });
+
+    // Si la apuesta es ganada, agregar las ganancias al saldo
+    if (newStatus === "WON") {
+      // Calcular ganancias y redondear a 2 decimales para evitar errores de precisión
+      const winnings = roundMoney(bet.amount * bet.odds);
+      
+      await tx.user.update({
+        where: { id: bet.userId },
+        data: {
+          balance: {
+            increment: winnings,
+          },
+        },
+      });
+
+      console.log(`💰 Apuesta ganada - Ganancias agregadas:`, {
+        betId: bet.id,
+        usuario: bet.user.email,
+        montoApostado: bet.amount,
+        cuota: bet.odds,
+        ganancias: winnings,
+        nuevoSaldo: roundMoney(bet.user.balance + winnings),
+      });
+    } else if (newStatus === "LOST") {
+      console.log(`❌ Apuesta perdida:`, {
+        betId: bet.id,
+        usuario: bet.user.email,
+        montoPerdido: bet.amount,
+      });
+    }
+
+    return updatedBet;
+  });
+
+  return {
+    id: result.id,
+    eventId: result.eventId,
+    userId: result.user.email,
+    selection: result.selection as "1" | "X" | "2",
+    odds: result.odds,
+    amount: result.amount,
+    status: result.status as BetStatus,
+    createdAt: result.createdAt,
+    event: {
+      id: result.event.id,
+      league: result.event.league,
+      homeTeam: result.event.homeTeam,
+      awayTeam: result.event.awayTeam,
+      startTime: result.event.startTime,
+      odds: {
+        home: result.event.oddsHome,
+        draw: result.event.oddsDraw,
+        away: result.event.oddsAway,
+      },
+    },
+  };
+}
+
+/**
+ * Obtener el saldo actual de un usuario
+ */
+export async function getUserBalance(email: string): Promise<number> {
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { balance: true },
+  });
+
+  if (!user) {
+    throw new Error("Usuario no encontrado");
+  }
+
+  return user.balance;
 }

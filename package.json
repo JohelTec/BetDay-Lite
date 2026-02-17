@@ -13,7 +13,9 @@
     "db:test": "npx tsx scripts/test-credentials.ts",
     "test:login": "npx tsx scripts/test-login-validations.ts",
     "test:db": "npx tsx scripts/validate-db-credentials.ts",
-    "test:user": "npx tsx scripts/test-user-validation.ts"
+    "test:user": "npx tsx scripts/test-user-validation.ts",
+    "test:balance": "npx tsx scripts/test-balance-system.ts",
+    "test:decimal": "npx tsx scripts/test-decimal-precision.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

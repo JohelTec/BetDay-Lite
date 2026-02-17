@@ -229,18 +229,18 @@ export default async function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 border-b border-emerald-700 shadow-lg">
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <User className="w-7 h-7 sm:w-8 sm:h-8 text-emerald-700" />
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center flex-shrink-0 border border-white/30">
+                <User className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">
+                <h1 className="text-xl sm:text-2xl font-semibold text-white drop-shadow-md">
                   Mi Perfil
                 </h1>
-                <p className="text-xs sm:text-sm text-gray-500 truncate">
+                <p className="text-xs sm:text-sm text-emerald-50 truncate">
                   {session.user.email}
                 </p>
               </div>
@@ -248,7 +248,7 @@ export default async function ProfilePage() {
             
             <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto">
               {/* Balance Card */}
-              <div className="bg-gray-50 px-4 sm:px-6 py-2 sm:py-3 rounded-lg border border-gray-200 flex-shrink-0">
+              <div className="bg-white/90 backdrop-blur-sm px-4 sm:px-6 py-2 sm:py-3 rounded-lg border border-white/50 flex-shrink-0 shadow-lg">
                 <div className="flex items-center space-x-2 sm:space-x-3">
                   <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
                     <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-700" />
@@ -263,7 +263,7 @@ export default async function ProfilePage() {
               </div>
               
               {/* Nivel Badge */}
-              <div className="flex items-center space-x-2 bg-gray-50 px-4 sm:px-5 py-2 sm:py-3 rounded-lg border border-gray-200 flex-shrink-0">
+              <div className="flex items-center space-x-2 bg-white/90 backdrop-blur-sm px-4 sm:px-5 py-2 sm:py-3 rounded-lg border border-white/50 flex-shrink-0 shadow-lg">
                 <Award className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-700" />
                 <div>
                   <div className="text-[10px] sm:text-xs text-gray-500 font-medium uppercase">Nivel</div>

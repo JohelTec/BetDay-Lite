@@ -53,8 +53,16 @@ Visita [http://localhost:3000](http://localhost:3000) e inicia sesión con:
 - **📅 Línea de Tiempo Diaria**: Explora eventos deportivos organizados por hora con mercados de apuestas 1X2
 - **🔐 Autenticación Segura**: Autenticación real de usuarios con hash de contraseñas (bcryptjs)
 - **💰 Realizar Apuestas**: Realiza apuestas en múltiples eventos deportivos con almacenamiento persistente
-- **💵 Saldo de Usuario**: Cada usuario comienza con $1000 de saldo virtual
-- **👤 Perfil de Usuario**: Visualiza todas tus apuestas con su estado (PENDIENTE, GANADA, PERDIDA)
+- **💵 Gestión de Saldo**: Sistema completo de balance con transacciones atómicas y precisión decimal
+  - Cada usuario comienza con $1,000 de saldo virtual
+  - Validación de saldo insuficiente antes de apostar
+  - Actualización automática al ganar/perder apuestas
+  - Precisión de 2 decimales en todas las operaciones
+- **🎯 Montos Personalizables**: Elige cuánto apostar con input personalizado ($0.01 - $10,000)
+- **👤 Perfil de Usuario**: Visualiza todas tus apuestas con estadísticas detalladas
+  - Estados de apuesta: PENDIENTE, GANADA, PERDIDA
+  - Estadísticas: tasa de acierto, ganancias/pérdidas, ROI
+  - Visualización del saldo actual en tiempo real
 - **📊 Detalles de Apuesta**: Vista detallada de apuestas individuales con información completa
 - **💾 Persistencia en Base de Datos**: Base de datos SQLite con Prisma ORM
 - **🎨 UI Moderna**: Diseño hermoso y responsivo con animaciones suaves
@@ -62,11 +70,14 @@ Visita [http://localhost:3000](http://localhost:3000) e inicia sesión con:
 
 ### Características Técnicas
 - **Componentes de Servidor**: Aprovechando Next.js 15 App Router para rendimiento óptimo
-- **Rutas API**: Endpoints API RESTful para gestión de eventos y apuestas
+- **Rutas API**: Endpoints API RESTful para gestión de eventos, apuestas y balance
+- **Transacciones Atómicas**: Uso de `prisma.$transaction()` para operaciones de balance consistentes
+- **Precisión Decimal**: Función `roundMoney()` para operaciones monetarias exactas (2 decimales)
 - **Integración de Base de Datos**: Prisma ORM con SQLite para persistencia de datos
 - **Seguridad de Contraseñas**: bcryptjs para hash seguro de contraseñas
 - **Validación de Email**: Validación del lado del servidor con patrones regex
-- **Scripts de Base de Datos**: Scripts de utilidad para pruebas y gestión de base de datos
+- **Validación de Balance**: Verificación de saldo suficiente antes de cada apuesta
+- **Scripts de Base de Datos**: Scripts de utilidad para pruebas, gestión y validación
 - **Estados de Carga**: UI de suspenso y carga en toda la aplicación
 - **Rutas Protegidas**: Protección de rutas basada en middleware
 - **Notificaciones Toast**: Retroalimentación en tiempo real usando Sonner
@@ -123,10 +134,90 @@ model Bet {
   userId    String
   selection String   // "1", "X", o "2"
   odds      Float
-  amount    Float
+  amount    Float    // Monto de la apuesta con precisión de 2 decimales
   status    String   // "PENDING", "WON", o "LOST"
   createdAt DateTime @default(now())
+  
+  event     Event    @relation(fields: [eventId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }
+```
+
+## 💰 Sistema de Gestión de Balance
+
+### Características del Balance
+
+**Saldo Inicial**: Cada usuario comienza con $1,000.00 al registrarse
+
+**Transacciones Atómicas**: Todas las operaciones de balance utilizan `prisma.$transaction()` para garantizar consistencia ACID:
+- Crear apuesta → Descontar saldo
+- Ganar apuesta → Agregar ganancias (monto × cuota)
+- Perder apuesta → Sin cambios (ya descontado al apostar)
+
+**Precisión Decimal**: Función `roundMoney()` para operaciones exactas:
+```typescript
+function roundMoney(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+```
+
+**Validaciones**:
+- ✅ Monto mínimo: $0.01
+- ✅ Monto máximo: $10,000.00
+- ✅ Verificación de saldo insuficiente
+- ✅ Protección contra valores negativos
+- ✅ Redondeo automático a 2 decimales
+
+### Flujo de Apuesta
+
+1. **Usuario selecciona monto**: Input personalizable con botones rápidos ($5, $10, $25, $50, $100)
+2. **Validación de saldo**: Sistema verifica que `user.balance >= amount`
+3. **Transacción atómica**:
+   ```typescript
+   await prisma.$transaction(async (tx) => {
+     // Crear apuesta
+     const bet = await tx.bet.create({ ... });
+     // Descontar del saldo
+     await tx.user.update({
+       data: { balance: { decrement: roundedAmount } }
+     });
+   });
+   ```
+4. **Actualización en UI**: Balance actualizado automáticamente
+
+### Resolución de Apuestas
+
+**Apuesta Ganada** (Status: WON):
+```typescript
+const winnings = roundMoney(bet.amount * bet.odds);
+await tx.user.update({
+  data: { balance: { increment: winnings } }
+});
+```
+
+**Apuesta Perdida** (Status: LOST):
+- No hay cambios en el balance (ya se descontó al apostar)
+- El monto apostado se pierde
+
+### Ejemplos de Cálculo
+
+**Ejemplo 1: Apuesta Simple**
+```
+Balance inicial: $100.00
+Apuesta: $20.00 @ 1.67 odds
+Balance después de apostar: $80.00
+Si GANA → +$33.40 → Balance final: $113.40
+Si PIERDE → $0.00 → Balance final: $80.00
+```
+
+**Ejemplo 2: Múltiples Apuestas**
+```
+Balance inicial: $100.00
+Apuesta 1: -$20.00 @ 1.67 → Balance: $80.00
+Apuesta 1 GANADA: +$33.40 → Balance: $113.40
+Apuesta 2: -$10.00 @ 3.50 → Balance: $103.40
+Apuesta 2 PERDIDA: $0.00 → Balance final: $103.40
+Ganancia neta: +$3.40
 ```
 
 ## 🏗️ Decisiones Clave de Arquitectura
@@ -254,15 +345,40 @@ Navega a [http://localhost:3000](http://localhost:3000)
 
 ### Realizar Apuestas
 1. Explora la línea de tiempo de eventos en la página de inicio
-2. Cada evento muestra el mercado 1X2 (Local/Empate/Visitante)
-3. Haz clic en cualquier botón de cuota para realizar una apuesta
-4. Verás una notificación de éxito y la apuesta se guardará
+2. Cada evento muestra:
+   - Mercado 1X2 (Local/Empate/Visitante)
+   - Input para elegir monto de apuesta
+   - Botones rápidos: $5, $10, $25, $50, $100
+   - Retorno potencial calculado dinámicamente
+3. Ingresa o selecciona el monto que deseas apostar
+4. Haz clic en cualquier botón de cuota (Local/Empate/Visitante)
+5. El sistema validará tu saldo y procesará la apuesta
+6. Verás una notificación de éxito y tu balance actualizado
+7. La apuesta aparecerá en tu perfil con estado PENDIENTE
 
-### Visualizar Tus Apuestas
+**Ejemplo**: Si apuestas $25 en Local con cuota 1.67:
+- Balance antes: $100.00
+- Balance después: $75.00
+- Si ganas: +$41.75 → Balance final: $116.75
+
+### Visualizar Tus Apuestas y Balance
 1. Haz clic en "Perfil" en la navegación
-2. Visualiza todas tus apuestas con su estado
-3. Ve estadísticas: Total, Ganadas, Perdidas y Apuestas Pendientes
-4. Haz clic en cualquier tarjeta de apuesta para ver información detallada
+2. En la cabecera verás:
+   - Tu email
+   - **Saldo actual** en una tarjeta destacada
+   - Tu nivel de usuario
+3. Estadísticas principales:
+   - Total de apuestas
+   - Apuestas ganadas (color verde)
+   - Apuestas perdidas (color rojo)
+   - Apuestas pendientes (color amarillo)
+4. Estadísticas avanzadas:
+   - **Tasa de Acierto**: Porcentaje de apuestas ganadas
+   - **Ganancia/Pérdida**: Balance positivo o negativo total
+   - **ROI**: Retorno sobre inversión
+   - **Cuota Promedio**: Promedio de todas las cuotas apostadas
+5. Historial completo de apuestas con detalles
+6. Haz clic en cualquier apuesta para ver información detallada
 
 ## 📂 Estructura del Proyecto
 
@@ -419,6 +535,8 @@ npm run db:test         # Probar autenticación
 npm run test:login      # Probar validaciones de login
 npm run test:db         # Probar credenciales de base de datos
 npm run test:user       # Probar validación de usuario
+npm run test:balance    # Probar sistema completo de balance
+npm run test:decimal    # Probar precisión decimal en operaciones
 ```
 
 ### Construir para Producción
@@ -462,7 +580,26 @@ npm run test:db
 
 # Probar validación de usuario
 npm run test:user
+
+# Probar sistema completo de balance
+npm run test:balance
+
+# Probar precisión decimal en operaciones monetarias
+npm run test:decimal
 ```
+
+**Test de Balance**: Valida:
+- ✅ Creación de usuario con saldo inicial
+- ✅ Descuento correcto al crear apuesta
+- ✅ Actualización automática al ganar
+- ✅ Validación de saldo insuficiente
+- ✅ Balance final después de múltiples operaciones
+
+**Test de Precisión Decimal**: Valida:
+- ✅ Operaciones con decimales simples ($10.25)
+- ✅ Multiplicaciones con decimales (10.25 × 1.67)
+- ✅ Múltiples operaciones pequeñas sin acumulación de error
+- ✅ Redondeo correcto a 2 decimales en todos los casos
 
 #### Comandos de Prisma
 ```bash
@@ -491,9 +628,20 @@ npx prisma migrate reset
 
 ### Apuestas
 - `POST /api/bets` - Crear una nueva apuesta (requiere autenticación)
-  - Body: `{ eventId, selection, odds, amount }`
+  - Body: `{ eventId, selection, amount }`
+  - Validaciones: monto > 0, saldo suficiente
+  - Efecto: Descuenta `amount` del balance del usuario
+  - Respuesta: Apuesta creada con status PENDING
 - `GET /api/bets` - Obtener apuestas del usuario actual (requiere autenticación)
 - `GET /api/bets/[id]` - Obtener detalles de apuesta específica (requiere autenticación)
+- `PATCH /api/bets/[id]` - Actualizar estado de apuesta (administrador)
+  - Body: `{ status: "WON" | "LOST" }`
+  - Efecto WON: Agrega `amount × odds` al balance del usuario
+  - Efecto LOST: Sin cambios en balance
+
+### Balance
+- `GET /api/user/balance` - Obtener saldo actual del usuario (requiere autenticación)
+  - Respuesta: `{ email, balance }`
 
 ### Formatos de Respuesta
 Todas las respuestas API siguen el formato JSON estándar:
@@ -517,11 +665,19 @@ Los usuarios no autenticados serán redirigidos a la página de inicio de sesió
 
 Documentación adicional disponible en el proyecto:
 
+### Guías Generales
 - **[DEPLOY.md](DEPLOY.md)**: Guía detallada de despliegue para Vercel y otras plataformas
 - **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)**: Problemas comunes y soluciones
+
+### Documentación Técnica
 - **[docs/VALIDACION-BD.md](docs/VALIDACION-BD.md)**: Documentación de validación de base de datos
 - **[docs/VALIDACIONES-LOGIN.md](docs/VALIDACIONES-LOGIN.md)**: Flujo de validación de login
-- **[scripts/README.md](scripts/README.md)**: Documentación de scripts de base de datos
+- **[docs/SISTEMA-SALDO.md](docs/SISTEMA-SALDO.md)**: Documentación técnica del sistema de balance
+- **[docs/IMPLEMENTACION-SALDO.md](docs/IMPLEMENTACION-SALDO.md)**: Resumen de implementación del balance
+- **[docs/PRECISION-DECIMAL.md](docs/PRECISION-DECIMAL.md)**: Manejo de precisión decimal en operaciones
+
+### Scripts y Utilidades
+- **[scripts/README.md](scripts/README.md)**: Documentación de scripts de base de datos y testing
 
 ## 🐛 Solución de Problemas
 
@@ -557,18 +713,38 @@ Para solución de problemas más detallada, consulta [TROUBLESHOOTING.md](TROUBL
 
 ## 🎯 Mejoras Futuras
 
+### Funcionalidades
 - **Actualizaciones en Tiempo Real**: Integración de WebSocket para cuotas y marcadores en vivo
 - **Marcadores de Partidos en Vivo**: Integración con APIs de datos deportivos
 - **Tipos de Apuesta Avanzados**: Over/under, handicap, resultado correcto
-- **Boleto de Apuestas**: Múltiples selecciones en una sola apuesta
-- **Gestión de Saldo de Usuario**: Depósitos, retiros, historial de transacciones
+- **Boleto de Apuestas**: Múltiples selecciones en una sola apuesta (acumuladas)
 - **Características Sociales**: Compartir apuestas, tablas de clasificación, seguir a otros usuarios
-- **Migración PostgreSQL**: Soporte completo de PostgreSQL para producción
-- **Panel de Administración**: Gestionar eventos, usuarios y apuestas
+- **Historial de Transacciones**: Log detallado de todos los movimientos de balance
 - **Notificaciones Push**: Notificaciones de resultados de apuestas en tiempo real
+
+### Balance y Pagos
+- **Depósitos Virtuales**: Sistema simulado de recarga de saldo
+- **Retiros**: Sistema de retiro de ganancias simulado
+- **Historial de Balance**: Gráfica temporal de evolución del saldo
+- **Límites Personalizables**: Permitir al usuario establecer límites diarios/semanales
+- **Decimal Type**: Migrar de Float a Decimal en Prisma para mayor precisión
+
+### Administración
+- **Panel de Administración**: Gestionar eventos, usuarios y apuestas
+- **Resolución Manual**: Interface para marcar apuestas como ganadas/perdidas
+- **Ajustes de Balance**: Herramientas para administrar saldos de usuarios
+- **Reportes**: Estadísticas globales de la plataforma
+
+### Seguridad
 - **Autenticación de Dos Factores**: Seguridad mejorada con 2FA
 - **Juego Responsable**: Establecer límites de apuestas y autoexclusión
-- **Panel de Analíticas**: Estadísticas e insights de apuestas
+- **Rate Limiting**: Limitar número de apuestas por usuario/tiempo
+
+### Infraestructura
+- **Migración PostgreSQL**: Soporte completo de PostgreSQL para producción
+- **Caché con Redis**: Mejorar rendimiento con caché de eventos y cuotas
+- **CDN**: Optimización de assets estáticos
+- **Monitoreo**: Integración con herramientas de APM (Sentry, New Relic)
 
 ## 📄 Licencia
 

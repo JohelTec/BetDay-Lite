@@ -16,6 +16,7 @@ export default function EventCard({ event, isAuthenticated }: EventCardProps) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [showMoreInfo, setShowMoreInfo] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [betAmount, setBetAmount] = useState<string>("10");
   const router = useRouter();
 
   const formatTime = (date: Date) => {
@@ -68,9 +69,10 @@ export default function EventCard({ event, isAuthenticated }: EventCardProps) {
     return ((totalProb - 1) * 100).toFixed(1);
   };
 
-  // Calcular potencial de retorno por cada $10
+  // Calcular potencial de retorno por el monto apostado
   const getPotentialReturn = (odds: number) => {
-    return (10 * odds).toFixed(2);
+    const amount = parseFloat(betAmount) || 0;
+    return (amount * odds).toFixed(2);
   };
 
   // Determinar si es alta o baja probabilidad
@@ -102,6 +104,23 @@ export default function EventCard({ event, isAuthenticated }: EventCardProps) {
       return;
     }
 
+    // Validar que el monto sea válido
+    const amount = parseFloat(betAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error("Por favor ingresa un monto válido");
+      return;
+    }
+
+    if (amount < 0.01) {
+      toast.error("El monto mínimo es $0.01");
+      return;
+    }
+
+    if (amount > 10000) {
+      toast.error("El monto máximo es $10,000");
+      return;
+    }
+
     setLoading(true);
     setSelectedOption(selection);
 
@@ -114,7 +133,7 @@ export default function EventCard({ event, isAuthenticated }: EventCardProps) {
         body: JSON.stringify({
           eventId: event.id,
           selection,
-          amount: 10,
+          amount: amount,
         }),
       });
 
@@ -122,7 +141,7 @@ export default function EventCard({ event, isAuthenticated }: EventCardProps) {
         const bet = await response.json();
         setShowSuccess(true);
         toast.success(`¡Apuesta realizada! ${selection} @ ${odds.toFixed(2)}`, {
-          description: `${event.homeTeam} vs ${event.awayTeam}`,
+          description: `${event.homeTeam} vs ${event.awayTeam} - $${amount.toFixed(2)}`,
           duration: 3000,
         });
         
@@ -260,6 +279,62 @@ export default function EventCard({ event, isAuthenticated }: EventCardProps) {
             </span>
           </div>
 
+          {/* Input para Monto de Apuesta */}
+          <div className="mb-4 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-xl p-4 border-2 border-indigo-200 shadow-sm">
+            <label htmlFor={`bet-amount-${event.id}`} className="block text-xs font-black text-gray-700 uppercase mb-2 text-center tracking-wider">
+              💰 Monto a Apostar
+            </label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-lg">$</span>
+              <input
+                id={`bet-amount-${event.id}`}
+                type="number"
+                min="0.01"
+                max="10000"
+                step="0.01"
+                value={betAmount}
+                onChange={(e) => setBetAmount(e.target.value)}
+                placeholder="10.00"
+                className="w-full pl-8 pr-4 py-3 text-center text-2xl font-black text-gray-900 bg-white border-2 border-indigo-300 rounded-xl focus:ring-4 focus:ring-indigo-300 focus:border-indigo-500 focus:outline-none transition-all duration-300 hover:border-indigo-400 placeholder:text-gray-300"
+              />
+            </div>
+            <div className="mt-2 flex items-center justify-center space-x-2">
+              <button
+                onClick={() => setBetAmount("5")}
+                className="px-3 py-1 text-xs font-bold bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-colors"
+              >
+                $5
+              </button>
+              <button
+                onClick={() => setBetAmount("10")}
+                className="px-3 py-1 text-xs font-bold bg-white border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-50 hover:border-indigo-400 transition-colors"
+              >
+                $10
+              </button>
+              <button
+                onClick={() => setBetAmount("25")}
+                className="px-3 py-1 text-xs font-bold bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-colors"
+              >
+                $25
+              </button>
+              <button
+                onClick={() => setBetAmount("50")}
+                className="px-3 py-1 text-xs font-bold bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-colors"
+              >
+                $50
+              </button>
+              <button
+                onClick={() => setBetAmount("100")}
+                className="px-3 py-1 text-xs font-bold bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-colors"
+              >
+                $100
+              </button>
+            </div>
+            <p className="text-center text-[10px] text-gray-500 font-medium mt-2">
+              Mínimo: $0.01 • Máximo: $10,000.00
+            </p>
+          </div>
+
           <div className="grid grid-cols-3 gap-3">
             <button
               onClick={() => handleBet("1", event.odds.home)}
@@ -275,7 +350,7 @@ export default function EventCard({ event, isAuthenticated }: EventCardProps) {
               <div className="text-[9px] uppercase mb-2 font-black tracking-widest opacity-75">Local</div>
               <div className="text-3xl font-black group-hover:animate-bounce-slow">{event.odds.home.toFixed(2)}</div>
               <div className="text-[9px] text-blue-600 font-semibold mt-1">
-                Prob: {getImpliedProbability(event.odds.home)}%
+                Gana: ${getPotentialReturn(event.odds.home)}
               </div>
               {selectedOption !== "1" && !loading && (
                 <>
@@ -303,7 +378,7 @@ export default function EventCard({ event, isAuthenticated }: EventCardProps) {
               <div className="text-[9px] uppercase mb-2 font-black tracking-widest opacity-75">Empate</div>
               <div className="text-3xl font-black group-hover:animate-bounce-slow">{event.odds.draw.toFixed(2)}</div>
               <div className="text-[9px] text-amber-600 font-semibold mt-1">
-                Prob: {getImpliedProbability(event.odds.draw)}%
+                Gana: ${getPotentialReturn(event.odds.draw)}
               </div>
               {selectedOption !== "X" && !loading && (
                 <>
@@ -331,7 +406,7 @@ export default function EventCard({ event, isAuthenticated }: EventCardProps) {
               <div className="text-[9px] uppercase mb-2 font-black tracking-widest opacity-75">Visit.</div>
               <div className="text-3xl font-black group-hover:animate-bounce-slow">{event.odds.away.toFixed(2)}</div>
               <div className="text-[9px] text-red-600 font-semibold mt-1">
-                Prob: {getImpliedProbability(event.odds.away)}%
+                Gana: ${getPotentialReturn(event.odds.away)}
               </div>
               {selectedOption !== "2" && !loading && (
                 <>
@@ -402,7 +477,7 @@ export default function EventCard({ event, isAuthenticated }: EventCardProps) {
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-3 border border-green-200">
                 <h4 className="text-xs font-black text-gray-700 uppercase mb-2 flex items-center space-x-1">
                   <BarChart3 className="w-3.5 h-3.5" />
-                  <span>Retorno por $10 Apostados</span>
+                  <span>Retorno por ${(parseFloat(betAmount) || 0).toFixed(2)} Apostados</span>
                 </h4>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="text-center">

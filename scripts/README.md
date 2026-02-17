@@ -60,7 +60,41 @@ Ejecuta 27 pruebas automáticas de validaciones del sistema de login.
 npm run test:login
 ```
 
-### 6. Abrir Prisma Studio
+### 6. Prueba del Sistema de Saldo (`test-balance-system.ts`) 💰 **NUEVO**
+Prueba completa del sistema de gestión de saldo de usuario.
+
+```bash
+npm run test:balance
+```
+
+Este script realiza:
+- ✅ Creación de usuario con saldo inicial específico
+- ✅ Creación de apuesta y descuento automático del saldo
+- ✅ Simulación de apuesta ganada con cálculo de ganancias
+- ✅ Validación de saldo insuficiente
+- ✅ Simulación de apuesta perdida
+- ✅ Resumen completo con historial de transacciones
+
+**Ejemplo de salida:**
+```
+🧪 === PRUEBA DEL SISTEMA DE GESTIÓN DE SALDO ===
+
+1️⃣ Creando usuario de prueba...
+✅ Usuario creado: saldo-test@example.com
+   💰 Saldo inicial: $100.00
+
+3️⃣ Creando apuesta de $20...
+✅ Apuesta creada
+   💸 Monto apostado: $20.00
+   💰 Saldo actual: $80.00
+
+4️⃣ Simulando apuesta ganada...
+✅ Apuesta ganada
+   🎉 Ganancias: $50.00
+   💰 Saldo final: $130.00
+```
+
+### 7. Abrir Prisma Studio
 Para ver y editar los datos de la base de datos visualmente:
 
 ```bash
@@ -109,6 +143,7 @@ npm run db:studio
 | `npm run db:test` | Probar bcrypt básico |
 | `npm run test:db` | **Validación completa con BD** ⭐ |
 | `npm run test:login` | Pruebas de validaciones (27 tests) |
+| `npm run test:balance` | **Pruebas de sistema de saldo** 💰 |
 | `npm run db:studio` | Abrir interfaz visual de BD |
 
 ## Notas Técnicas
